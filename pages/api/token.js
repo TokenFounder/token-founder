@@ -377,7 +377,8 @@ export default async function search(req, res) {
             ? new Date(lastTweetTimestamp * 1000 + 1000).toISOString()
             : undefined;
     console.log('search start_time', start_time);
-    const tweetGenerator = await client.v2.search('@TokenFounder ".base.eth"', {
+    // const tweetGenerator = await client.v2.search('@basednames ".base.eth"', {
+    const tweetGenerator = await client.v2.search('@TokenFounder "symbol" "decimals" "holder" "supply" ', {
         start_time,
         'tweet.fields': 'author_id,created_at,referenced_tweets',
     });
