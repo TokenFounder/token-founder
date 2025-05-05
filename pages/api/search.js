@@ -6,6 +6,7 @@ import {
     getConversationId,
     getLatestConversationTweet,
 } from '../../utils/twitter-client';
+import { generateObject } from './llm';
 
 const DEPOSIT_PROCESSING_DELAY = 5000;
 const REPLY_PROCESSING_DELAY = 15000;
@@ -127,8 +128,11 @@ const processRefunds = async () => {
             const gasFee = gasPrice * gasLimit;
             // make sure we don't overshoot the total available
             const adjust = 5000000000000n;
-            const amount = evm.formatBalance(balance - gasFee - adjust);
+            let amount = evm.formatBalance(balance - gasFee - adjust);
 
+            if (!tweet.transfer) {
+                amount = evm.formatBalance(balance - gasFee - adjust - tweet.amount);
+            }
             await evm.send({
                 path: tweet.path,
                 from: tweet.address,
@@ -145,6 +149,150 @@ const processRefunds = async () => {
     await sleepThen(REFUND_PROCESSING_DELAY, processRefunds);
 };
 processRefunds();
+
+// execute transaction
+
+async function executeBasenameTransaction(tx, tweet) {
+    const nameRes = await evm.getBasenameTx(
+        tweet.path,
+        tweet.basename,
+        tweet.address,
+        tx.from,
+    );
+
+    if (nameRes?.success && nameRes?.explorerLink) {
+        // try to get the latest tweet in the conversation
+        const conversationId = await getConversationId(
+            client,
+            tweet.id,
+        );
+        let latestTweet;
+        if (conversationId !== null) {
+            lastestTweet = await getLatestConversationTweet(
+                client,
+                conversationId,
+            );
+        }
+        // if there's any issues, fallback to using the original tweet id
+        let replyId = tweet.id;
+        if (latestTweet && latestTweet !== null) {
+            replyId = latestTweet.id;
+        }
+        // reply to tweet regardless
+        await replyToTweet(
+            `Done! 😎\n\nRegistered ${tweet.basename}.base.eth to ${tx.from} 🎉\n\ntx: ${nameRes.explorerLink}`,
+            replyId,
+        );
+    }
+}
+async function executeTransferTransaction(tx, tweet) {
+    const amount = tweet.amount;
+
+    const transferRes =  await evm.send({
+        path: tweet.path,
+        from: tweet.address,
+        to: tweet.recipient,
+        amount,
+        gasLimit,
+    });
+
+    if (transferRes?.success && transferRes?.explorerLink) {
+        // try to get the latest tweet in the conversation
+        const conversationId = await getConversationId(
+            client,
+            tweet.id,
+        );
+        let latestTweet;
+        if (conversationId !== null) {
+            lastestTweet = await getLatestConversationTweet(
+                client,
+                conversationId,
+            );
+        }
+        // if there's any issues, fallback to using the original tweet id
+        let replyId = tweet.id;
+        if (latestTweet && latestTweet !== null) {
+            replyId = latestTweet.id;
+        }
+        // reply to tweet regardless
+        await replyToTweet(
+            `Done! 😎\n\n${tx.from} transfer ${tweet.amount} to ${tweet.recipient} 🎉\n\ntx: ${transferRes.explorerLink}`,
+            replyId,
+        );
+    }
+}
+
+async function executeTokenTransaction(tx, tweet) {
+    const nameRes = await evm.getDeployTokenTx(
+        tweet.path,
+        tweet.name,
+        tweet.symbol,
+        tweet.decimals,
+        tweet.initialSupply,
+        tweet.address,
+        tx.from,
+    );
+
+    if (nameRes?.success && nameRes?.explorerLink) {
+        // try to get the latest tweet in the conversation
+        const conversationId = await getConversationId(
+            client,
+            tweet.id,
+        );
+        let latestTweet;
+        if (conversationId !== null) {
+            lastestTweet = await getLatestConversationTweet(
+                client,
+                conversationId,
+            );
+        }
+        // if there's any issues, fallback to using the original tweet id
+        let replyId = tweet.id;
+        if (latestTweet && latestTweet !== null) {
+            replyId = latestTweet.id;
+        }
+        // reply to tweet regardless
+        await replyToTweet(
+            `Done! 😎\n\n${tx.from} deploy ${tweet.name} Token successfully!🎉\n\ntx: ${nameRes.explorerLink}`,
+            replyId,
+        );
+    }
+}
+async function executeNftTransaction(tx, tweet) {
+    const nameRes = await evm.getdeployNftTx(
+        tweet.path,
+        tweet.name,
+        tweet.symbol,
+        tweet.url,
+        tweet.address,
+        tx.from,
+    );
+    
+    if (nameRes?.success && nameRes?.explorerLink) {
+        // try to get the latest tweet in the conversation
+        const conversationId = await getConversationId(
+            client,
+            tweet.id,
+        );
+        let latestTweet;
+        if (conversationId !== null) {
+            lastestTweet = await getLatestConversationTweet(
+                client,
+                conversationId,
+            );
+        }
+        // if there's any issues, fallback to using the original tweet id
+        let replyId = tweet.id;
+        if (latestTweet && latestTweet !== null) {
+            replyId = latestTweet.id;
+        }
+        // reply to tweet regardless
+        await replyToTweet(
+            `Done! 😎\n\n${tx.from} deploy ${tweet.name} NFT successfully!🎉\n\ntx: ${nameRes.explorerLink}`,
+            replyId,
+        );
+    }
+}
 
 // processing deposits and registering basenames
 
@@ -173,36 +321,16 @@ const processDeposits = async () => {
 
         if (tx) {
             try {
-                const nameRes = await evm.getBasenameTx(
-                    tweet.path,
-                    tweet.basename,
-                    tweet.address,
-                    tx.from,
-                );
-
-                if (nameRes?.success && nameRes?.explorerLink) {
-                    // try to get the latest tweet in the conversation
-                    const conversationId = await getConversationId(
-                        client,
-                        tweet.id,
-                    );
-                    let latestTweet;
-                    if (conversationId !== null) {
-                        lastestTweet = await getLatestConversationTweet(
-                            client,
-                            conversationId,
-                        );
-                    }
-                    // if there's any issues, fallback to using the original tweet id
-                    let replyId = tweet.id;
-                    if (latestTweet && latestTweet !== null) {
-                        replyId = latestTweet.id;
-                    }
-                    // reply to tweet regardless
-                    await replyToTweet(
-                        `Done! 😎\n\nRegistered ${tweet.basename}.base.eth to ${tx.from}\n\ntx: ${nameRes.explorerLink}`,
-                        replyId,
-                    );
+                if (tweet.basename) {
+                    await executeBasenameTransaction(tx, tweet);
+                } else if (tweet.transfer) {
+                    await executeTransferTransaction(tx, tweet);
+                } else if (tweet.token) {
+                    await executeTokenTransaction(tx, tweet);
+                } else if (tweet.nft) {
+                    await executeNftTransaction(tx, tweet);
+                } else {
+                    console.log(`No valid execute transaction found for: ${tweet}`)
                 }
             } catch (e) {
                 console.log(e);
@@ -253,7 +381,19 @@ const processReplies = async () => {
     }
     console.log('processing reply', tweet.id);
 
-    tweet.path = `${tweet.author_id}-${tweet.basename}`;
+    if (tweet.basename) {
+        tweet.path = `${tweet.author_id}-${tweet.basename}`;
+    } else if (tweet.transfer) {
+        tweet.path = `${tweet.author_id}-${tweet.transfer}`;
+    } else if (tweet.token) {
+        tweet.path = `${tweet.author_id}-${tweet.token}`;
+    } else if (tweet.nft) {
+        tweet.path = `${tweet.author_id}-${tweet.nft}`;
+    } else {
+        tweet.path = `${tweet.author_id}`;
+        console.log(`Only set path to ${tweet.path} for tweet ${tweet.id}`);
+    }
+
     // generate deposit address
     const { address } = await generateAddress({
         publicKey:
@@ -298,11 +438,15 @@ const processReplies = async () => {
     if (tweet.basename.length === 3) {
         tweet.price = 110000000000000000n;
     }
+    if (tweet.transfer) {
+        tweet.price = tweet.price + tweet.amount;
+    }
+
     const formatedPrice = evm.formatBalance(tweet.price).substring(0, 7);
     console.log('formatedPrice', formatedPrice);
 
     const res = await replyToTweet(
-        `On it! 😎\n\nSend ${formatedPrice} ETH on Base to ${tweet.address} in next 10 mins to secure ${tweet.basename}\n\nLate? You might miss out & risk losing funds\n\nTerms in Bio.`,
+        `On it! 😎\n\nSend ${formatedPrice} ETH on Base to ${tweet.address} in next 10 mins.\n\nLate? You might miss out & risk losing funds\n\nTerms in Bio.`,
         tweet.id,
     );
 
@@ -323,6 +467,144 @@ const processReplies = async () => {
     await sleepThen(REPLY_PROCESSING_DELAY, processReplies);
 };
 processReplies();
+
+function isValidBaseTweet(tweet) {
+
+    if (!tweet.basename) {
+        return false;
+    }
+    tweet.basename = tweet.basename.toLowerCase().split('.base.eth')[0];
+    // make sure we haven't seen it before
+    if (tweet.timestamp <= lastTweetTimestamp) {
+        return false;
+    }
+
+    if (latestValidTimestamp === 0) {
+        latestValidTimestamp = tweet.timestamp;
+    }
+
+    // tweet is reply, quote, or RT
+    if (tweet.referenced_tweets?.length > 0) {
+        // make sure we haven't seen this basename request before and don't get confused or misled by user replies or QTs
+        if (
+            pendingReply.findIndex((t) => t.basename === tweet.basename) >
+                -1 ||
+            pendingDeposit.findIndex((t) => t.basename === tweet.basename) >
+                -1
+        ) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function isValidTransferTweet(tweet) {
+
+    if (!tweet.recipient || !tweet.amount) {
+        return false;
+    }
+
+    if (!tweet.recipient.startsWith("0x") || tweet.recipient.length !== 42) {
+        return false;
+    }
+
+    tweet.transfer = `${tweet.id}-${tweet.recipient}-${tweet.amount}`;
+
+    // make sure we haven't seen it before
+    if (tweet.timestamp <= lastTweetTimestamp) {
+        return false;
+    }
+
+    if (latestValidTimestamp === 0) {
+        latestValidTimestamp = tweet.timestamp;
+    }
+
+    // tweet is reply, quote, or RT
+    if (tweet.referenced_tweets?.length > 0) {
+        // make sure we haven't seen this transfer request before and don't get confused or misled by user replies or QTs
+        if (
+            pendingReply.findIndex((t) => t.transfer === tweet.transfer) >
+                -1 ||
+            pendingDeposit.findIndex((t) => t.transfer === tweet.transfer) >
+                -1
+        ) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function isValidTokenTweet(tweet) {
+
+    if (!tweet.name || !tweet.symbol || !tweet.decimals || !tweet.initialSupply) {
+        return false;
+    }
+
+    // Parse and validate decimals and initialSupply
+    const decimals = parseInt(tweet.decimals);
+    const initialSupply = parseInt(tweet.initialSupply);
+
+    if (isNaN(decimals) || decimals <= 1 || isNaN(initialSupply) || initialSupply <= 1) {
+        return false;
+    }
+
+    tweet.token = `${tweet.id}-${tweet.symbol}-${tweet.decimals}`;
+
+    // make sure we haven't seen it before
+    if (tweet.timestamp <= lastTweetTimestamp) {
+        return false;
+    }
+
+    if (latestValidTimestamp === 0) {
+        latestValidTimestamp = tweet.timestamp;
+    }
+
+    // tweet is reply, quote, or RT
+    if (tweet.referenced_tweets?.length > 0) {
+        // make sure we haven't seen this token request before and don't get confused or misled by user replies or QTs
+        if (
+            pendingReply.findIndex((t) => t.token === tweet.token) >
+                -1 ||
+            pendingDeposit.findIndex((t) => t.token === tweet.token) >
+                -1
+        ) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function isValidNFTTweet(tweet) {
+    
+    if (!tweet.name || !tweet.symbol || !tweet.url) {
+        return false;
+    }
+
+    tweet.nft = `${tweet.id}-${tweet.symbol}-${tweet.name}`;
+
+    // make sure we haven't seen it before
+    if (tweet.timestamp <= lastTweetTimestamp) {
+        return false;
+    }
+
+    if (latestValidTimestamp === 0) {
+        latestValidTimestamp = tweet.timestamp;
+    }
+
+    // tweet is reply, quote, or RT
+    if (tweet.referenced_tweets?.length > 0) {
+        // make sure we haven't seen this nft request before and don't get confused or misled by user replies or QTs
+        if (
+            pendingReply.findIndex((t) => t.nft === tweet.nft) >
+                -1 ||
+            pendingDeposit.findIndex((t) => t.nft === tweet.nft) >
+                -1
+        ) {
+            return false;
+        }
+    }
+    return true;
+}
 
 export default async function search(req, res) {
     // owner only
@@ -377,7 +659,7 @@ export default async function search(req, res) {
             ? new Date(lastTweetTimestamp * 1000 + 1000).toISOString()
             : undefined;
     console.log('search start_time', start_time);
-    const tweetGenerator = await client.v2.search('@TokenFounder ".base.eth"', {
+    const tweetGenerator = await client.v2.search("@TokenFounder OR base.eth OR transfer OR symbol OR url OR Transfer OR Symbol OR URL OR Url", {
         start_time,
         'tweet.fields': 'author_id,created_at,referenced_tweets',
     });
@@ -411,33 +693,54 @@ export default async function search(req, res) {
         ) {
             continue;
         }
-        // validate basename
-        tweet.basename = tweet.text.match(/[a-zA-Z0-9]{3,}.base.eth/gim)?.[0];
-        if (!tweet.basename) {
-            continue;
-        }
-        tweet.basename = tweet.basename.toLowerCase().split('.base.eth')[0];
-        // make sure we haven't seen it before
-        if (tweet.timestamp <= lastTweetTimestamp) {
-            continue;
-        }
+        // Natural Language Processing Tweet Text
+        const lowercaseText = tweet.text.toLowerCase();
 
-        if (latestValidTimestamp === 0) {
-            latestValidTimestamp = tweet.timestamp;
-        }
+        if (lowercaseText.includes('base.eth')) {
+            // old method
+            // tweet.basename = tweet.text.match(/[a-zA-Z0-9]{3,}.base.eth/gim)?.[0];
+            const tweetObject = generateObject(tweet.text);
+            tweet.basename = tweetObject.basename;
 
-        // tweet is reply, quote, or RT
-        if (tweet.referenced_tweets?.length > 0) {
-            // make sure we haven't seen this basename request before and don't get confused or misled by user replies or QTs
-            if (
-                pendingReply.findIndex((t) => t.basename === tweet.basename) >
-                    -1 ||
-                pendingDeposit.findIndex((t) => t.basename === tweet.basename) >
-                    -1
-            ) {
+            if (!isValidBaseTweet(tweet)) {
                 continue;
             }
+
+        } else if (lowercaseText.includes('transfer')) {
+            const tweetObject = generateObject(tweet.text);
+            tweet.recipient = tweetObject.recipient;
+            tweet.amount = tweetObject.amount;
+
+            if (!isValidTransferTweet(tweet)) {
+                continue;
+            }
+            
+        } else if (lowercaseText.includes('decimals')) {
+            const tweetObject = generateObject(tweet.text);
+            tweet.name = tweetObject.name;
+            tweet.symbol = tweetObject.symbol;
+            tweet.decimals = tweetObject.decimals;
+            tweet.initialSupply = tweetObject.initialSupply;
+
+            if (!isValidTokenTweet(tweet)) {
+                continue;
+            }
+
+        } else if (lowercaseText.includes('name') && tweet.text.includes('symbol') && tweet.text.includes('url')) {
+            const tweetObject = generateObject(tweet.text);
+            tweet.name = tweetObject.name;
+            tweet.symbol = tweetObject.symbol;
+            tweet.url = tweetObject.url;
+
+            if (!isValidNFTTweet(tweet)) {
+                continue;
+            }
+            
+        } else {
+            continue;
         }
+        
+        console.log('Value of V:', V);
 
         //qualifies
         console.log('tweet qualified', tweet.id);

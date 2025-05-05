@@ -5,7 +5,7 @@ import { parseSeedPhrase } from 'near-seed-phrase';
 import * as nearAPI from 'near-api-js';
 const { Near, Account, KeyPair, keyStores } = nearAPI;
 
-const networkId = 'mainnet';
+const networkId = 'testnet';
 const accountId = process.env.NEAR_ACCOUNT_ID;
 const contractId = process.env.NEAR_CONTRACT_ID;
 
@@ -18,7 +18,7 @@ keyStore.setKey(networkId, contractId, keyPair);
 const config = {
     networkId,
     keyStore,
-    nodeUrl: 'https://rpc.near.org',
+    nodeUrl: 'https://rpc.testnet.near.org',
     walletUrl: 'https://mynearwallet.com/',
     explorerUrl: 'https://nearblocks.io',
 };
@@ -76,7 +76,7 @@ const deploy = async () => {
 
     // NEEDS TO MATCH docker-compose.yaml CODEHASH
     const codehash =
-        '61923f6f77b607c96420d253e4eaa0764a125728cbe501a95c4477cb2a5e2351';
+        'c5f2a73c318fbc2b37162b23c4081f1b5986104e';
     account = getAccount(accountId);
     const approveRes = await account.functionCall({
         contractId,

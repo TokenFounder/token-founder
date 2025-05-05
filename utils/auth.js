@@ -3,7 +3,7 @@ const express = require('express');
 const session = require('express-session');
 const { TwitterApi } = require('twitter-api-v2');
 
-const CALLBACK = `https://bce28aac804836cdb77fc79db259a85cae27dc47-3000.dstack-prod5.phala.network/api/callback`;
+const CALLBACK = `https://0258-2001-569-7d3d-ce00-157f-afb8-c137-e56d.ngrok-free.app/api/callback`;
 const app = express();
 
 let cv, s;

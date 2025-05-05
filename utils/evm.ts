@@ -11,6 +11,16 @@ const L2_RESOLVER_ADDRESS = {
     mainnet: '0xC6d566A56A1aFf6508b41f6c90ff131615583BCD',
 }; // L2Resolver on Base Sepolia
 
+const DEPLOY_ERC20_ADDRESS = {
+    testnet: '0x9BB37Ddf2f574b71C847F4659cBea7518fe172ee',
+    mainnet: '',
+}; // ERC20 on Base Sepolia
+
+const DEPLOY_ERC721_ADDRESS = {
+    testnet: '0x9Dd5bCd24115E24774C43ee5811444AC57004D4f',
+    mainnet: '',
+}; // ERC721 on Base Sepolia
+
 // ABIs for Base Name Service contracts
 const REGISTRAR_CONTROLLER_ABI = [
     'function valid(string memory name) public pure returns (bool)',
@@ -38,6 +48,18 @@ const L2_RESOLVER_ABI = [
     'function setName(bytes32 node, string calldata name) external',
 ];
 
+const DEPLOY_ERC20_ABI = [
+    'function createERC20(string memory name, string memory symbol, uint8 decimals, uint256 initialSupply, address initialHolder) external returns (address)'
+];
+
+const DEPLOY_ERC721_ABI = [
+    'function createCollection(string memory name, string memory symbol, string memory baseURI) external returns (address)'
+];
+
+const MINT_ERC721_ABI = [
+    'function mint(address to) external onlyOwner'
+];
+
 const getProvider = () => {
     return new ethers.JsonRpcProvider(
         networkId === 'testnet'
@@ -57,8 +79,134 @@ export const evm = {
             ? 'https://sepolia.basescan.org'
             : 'https://basescan.org',
 
-    // custom methods for basednames registration
+    // deplopy token medthod
+    getDeployTokenTx: async (path, name, symbol, decimals, initialSupply, senderAddress, initialHolder) => {
+        try {
+            // Create contract interfaces
+            const deployTokenInterface = new ethers.Interface(DEPLOY_ERC20_ABI);
 
+            const provider = getProvider();
+ 
+            // Get the network's current values
+            const [chainId, nonce, feeData] = await Promise.all([
+                provider.getNetwork().then((n) => n.chainId),
+                provider.getTransactionCount(senderAddress),
+                provider.getFeeData(),
+            ]);
+
+            console.log('Chain ID:', chainId);
+
+            // Encode the register function call
+            const data = deployTokenInterface.encodeFunctionData(
+                'createERC20',
+                [name, symbol, decimals, initialSupply, initialHolder],
+            );
+
+            // Create transaction object for deploy token
+            const baseTx = {
+                to: DEPLOY_ERC20_ADDRESS[networkId],
+                data,
+                nonce,
+                chainId: evm.chainId, // Base Sepolia chain ID
+                type: 2, // EIP-1559 transaction
+                maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
+                maxFeePerGas: feeData.maxFeePerGas,
+                gasLimit: 400000n, // Increase gas limit for safety
+                // value: price, // Send the registration price
+            };
+
+            return await evm.completeEthereumTx({ baseTx, path });
+        } catch (error) {
+            console.error('Error in deploy token handler:', error);
+            return {
+                success: false,
+                error: error.message,
+            };
+        }
+    }, 
+    
+    // deplopy nft medthod
+    getdeployNftTx: async (path, name, symbol, url, senderAddress, initialOwner) => {
+        try {
+            const provider = getProvider();
+
+            // Create deploy contract interfaces
+            const deployNftInterface = new ethers.Interface(DEPLOY_ERC721_ABI);
+
+            // Get the network's current values
+            const [chainId, deployNonce, deployFeeData] = await Promise.all([
+                provider.getNetwork().then((n) => n.chainId),
+                provider.getTransactionCount(senderAddress),
+                provider.getFeeData(),
+            ]);
+
+            console.log('Chain ID:', chainId);
+
+            // Encode the register function call
+            const deployData = deployNftInterface.encodeFunctionData(
+                'createCollection',
+                [name, symbol, url],
+            );
+
+            // STEP 1: Deploy NFT
+            // Create transaction object for deploy nft
+            const deployNfTx = {
+                to: DEPLOY_ERC721_ADDRESS[networkId],
+                data: deployData,
+                nonce: deployNonce,
+                chainId: evm.chainId, // Base Sepolia chain ID
+                type: 2, // EIP-1559 transaction
+                maxPriorityFeePerGas: deployFeeData.maxPriorityFeePerGas,
+                maxFeePerGas: deployFeeData.maxFeePerGas,
+                gasLimit: 400000n, // Increase gas limit for safety
+                // value: price, // Send the registration price
+            };
+
+            const deployNftTx = await evm.completeEthereumTx({ baseTx: deployNfTx, path });
+
+            const mintNftInterface = new ethers.Interface(MINT_ERC721_ABI);
+
+            // Get the network's current values
+            const [_chainId, mintNonce, mintFeeData] = await Promise.all([
+                provider.getNetwork().then((n) => n.chainId),
+                provider.getTransactionCount(senderAddress),
+                provider.getFeeData(),
+            ]);
+
+            console.log('Chain ID:', chainId);
+
+            // Encode the register function call
+            const mintData = mintNftInterface.encodeFunctionData(
+                'mint',
+                [initialOwner],
+            );
+
+            // STEP 2: Mint NFT
+            // Create transaction object for mint nft
+            const mintNfTx = {
+                to: deployNftTx.hash,
+                data: mintData,
+                nonce: mintNonce,
+                chainId: evm.chainId, // Base Sepolia chain ID
+                type: 2, // EIP-1559 transaction
+                maxPriorityFeePerGas: mintFeeData.maxPriorityFeePerGas,
+                maxFeePerGas: mintFeeData.maxFeePerGas,
+                gasLimit: 400000n, // Increase gas limit for safety
+                // value: price, // Send the registration price
+            };
+
+            return await evm.completeEthereumTx({ baseTx: mintNfTx, path: `${path}-mint` });
+
+        } catch (error) {
+            console.error('Error in deploy nft handler:', error);
+            return {
+                success: false,
+                error: error.message,
+            };
+        }
+    }, 
+
+    // custom methods for basednames registration
     checkBasename: async (basename) => {
         try {
             const provider = getProvider();

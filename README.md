@@ -1,4 +1,73 @@
-# Basednames Bot
+# Shade Agents Hackathon Submission
+
+## Token Founder Bot
+
+Based on LLM API, using natural language processing to handle user conversations, implement an MVP on chain behavioral AI Agent.
+
+Compatible with Basednames's buy basename features. 
+
+## New features
+
+Simultaneously possessing the ability to transfer basic ETH to an account address, release a custom ERC20 token, and release a custom ERC721 NFT feature.
+
+## Usage Prompt
+
+1. Buy a base name. "Hi @TokenFounder, Buy me tokenfounder.base.eth."
+
+2. Transfer ETH. "Hi @TokenFounder, Transfer 0.01 ETH to 0x67e2c2e6186ae9Cc17798b5bD0c3c36Ef0209aC9 on Base Network for me."
+
+3. Release a custom ERC20 token. "Hi @TokenFounder, I want deploy a new token called TokenFounder, symbol called TFT, decimals is 9, with an initial supply of 100000000 on Base Network for me."
+
+4. Release a custom ERC721 NFT. "Hi @TokenFounder, Deploy a new NFT, name is called NonFungibleTokenFounder, symbol is called NFTF, url is ipfs://QmXJ7.../ on Base Network for me."
+
+## Flow Chart
+
+![](./images/tokenfounder-twitter.png)
+
+## Artifact
+
+Docker image: tokenfounder/token-founder-twitter:v0.0.1
+
+Woker Agent Contract: shade.token-founder.testnet
+
+FT Factory Contract: https://sepolia.basescan.org/address/0x9bb37ddf2f574b71c847f4659cbea7518fe172ee
+
+NFT Factory Contract: https://sepolia.basescan.org/address/0x9dd5bcd24115e24774c43ee5811444ac57004d4f
+
+Phala VM: https://fbf968ca8673d8f46378092633e834209fd6b57b-3000.dstack-prod5.phala.network/
+
+![](./images/1746596805186.jpg)
+
+![](./images/1746597397670.jpg)
+
+![](./images/1746597589074.jpg)
+
+## Deploy project
+
+```bash
+# Build agent bot
+npm run build
+npm run docker:build
+# push this docker image to docker hub and save hashtag
+# Replace deploy.js codehash to hashtag
+
+# Deplooy near contract to testnet
+# Set NEAR_ACCOUNT_ID=token-founder.testnet in .env.development.local
+# Set NEAR_CONTRACT_ID=shade.token-founder.testnet in .env.development.local
+# Set NEAR_SEED_PHRASE=<NEAR_ACCOUNT_ID phrase> in .env.development.local
+npm run deploy:contract
+
+# Set .env NEXT_PUBLIC_contractId to shade.token-founder.testnet
+
+# In Phala Cloud
+# Set .env and image to Compose File
+# Open Network URL, fund some near gas to worker agent account
+
+# In twiter @TokenFounder
+```
+
+
+# Basednames Bot(README COPY)
 
 This bot is based on the shade agent template (details below). It is a non-custodial worker agent running in a TEE with a fully verifiable codebase, that uses NEAR's chain signatures to purchase names for user's on Base (Coinbase chain).
 

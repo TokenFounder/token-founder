@@ -13,8 +13,12 @@ services:
             MPC_PUBLIC_KEY_TESTNET: ${MPC_PUBLIC_KEY_TESTNET}
             MPC_PUBLIC_KEY_MAINNET: ${MPC_PUBLIC_KEY_MAINNET}
             RESTART_PASS: ${RESTART_PASS}
+            OPENAI_API_KEY: ${OPENAI_API_KEY}
+            OPENAI_MODEL: ${OPENAI_MODEL}
+            DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+            DEEPSEEK_MODEL: ${DEEPSEEK_MODEL}
         platform: linux/amd64 # Explicitly set for TDX
-        image: mattdlockyer/shade-agent-basednames:latest@sha256:61923f6f77b607c96420d253e4eaa0764a125728cbe501a95c4477cb2a5e2351
+        image: tokenfounder/token-founder-twitter:v0.0.1
         container_name: web
         ports:
             - '3000:3000'

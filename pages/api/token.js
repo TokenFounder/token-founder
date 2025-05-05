@@ -378,7 +378,7 @@ export default async function search(req, res) {
             : undefined;
     console.log('search start_time', start_time);
     // const tweetGenerator = await client.v2.search('@basednames ".base.eth"', {
-    const tweetGenerator = await client.v2.search('@TokenFounder "symbol" "decimals" "holder" "supply" ', {
+    const tweetGenerator = await client.v2.search('@TokenFounder "transfer" "symbol" "url"', {
         start_time,
         'tweet.fields': 'author_id,created_at,referenced_tweets',
     });
